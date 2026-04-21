@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tinyproxy
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tinyproxy
+  template:
+    metadata:
+      labels:
+        app: tinyproxy
+    spec:
+      initContainers:
+      - name: config-writer
+        image: alpine:3.19
+        command:
+        - sh
+        - -c
+        - |
+          cat /config-base/tinyproxy.conf > /config-out/tinyproxy.conf
+          echo "BasicAuth proxy ${TINYPROXY_PASSWORD}" >> /config-out/tinyproxy.conf
+        env:
+        - name: TINYPROXY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: tinyproxy-auth
+              key: password
+        volumeMounts:
+        - name: config-base
+          mountPath: /config-base
+        - name: config-out
+          mountPath: /config-out
+
+      containers:
+      - name: tinyproxy
+        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/tinyproxy:latest
+        ports:
+        - containerPort: 8888
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+        volumeMounts:
+        - name: config-out
+          mountPath: /etc/tinyproxy/tinyproxy.conf
+          subPath: tinyproxy.conf
+
+      volumes:
+      - name: config-base
+        configMap:
+          name: tinyproxy-config
+      - name: config-out
+        emptyDir: {}
