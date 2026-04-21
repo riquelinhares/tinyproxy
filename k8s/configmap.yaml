@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tinyproxy-config
+  namespace: default
+data:
+  tinyproxy.conf: |
+    Port 8888
+    Listen 0.0.0.0
+    Timeout 600
+    Allow 127.0.0.1
+    LogLevel Info
+    MaxClients 100
+    ConnectPort 443
+    ConnectPort 80
